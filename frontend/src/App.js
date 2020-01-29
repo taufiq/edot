@@ -3,6 +3,7 @@ import axios from 'axios';
 import AWS from 'aws-sdk';
 import './App.css';
 import VideoRecorder from './components/VideoRecorder';
+import UploadingScreen from './components/UploadingScreen';
 
 class App extends Component {
   constructor(props){
@@ -13,6 +14,7 @@ class App extends Component {
       error: false,
       errorMessage : "",
       s3Instance: null,
+      hasUploaded: false,
     }
   }
   componentDidMount() {
@@ -68,8 +70,9 @@ class App extends Component {
 
   uploadVideo = (video) => {
     const { s3Instance } = this.state;
-    console.log(video)
+    this.setState({ hasRecorded: true })
     let uploadParams = {Bucket: 'edot', Key: `tanahkow-${new Date().toISOString()}.webm`, Body: video};
+    setTimeout(() => this.setState({ hasUploaded: true }), 2000)
     // s3Instance.upload(uploadParams, {}, function (err, data) {
     //   if (err) {
     //     console.error('error', err)
@@ -82,30 +85,13 @@ class App extends Component {
 
 
   render() {
-    const SuccessMessage = () => (
-      <div style={{padding:50}}>
-        <h3 style={{color: 'green'}}>SUCCESSFUL UPLOAD</h3>
-        <a href={this.state.url}>Access the file here</a>
-        <br/>
-      </div>
-    )
-    const ErrorMessage = () => (
-      <div style={{padding:50}}>
-        <h3 style={{color: 'red'}}>FAILED UPLOAD</h3>
-        <span style={{color: 'red', backgroundColor: 'black'}}>ERROR: </span>
-        <span>{this.state.errorMessage}</span>
-        <br/>
-      </div>
-    )
+    const { hasRecorded, hasUploaded } = this.state;
     return (
       <div className="App">
-          <VideoRecorder onVideoRecorded={this.uploadVideo}/>
-          {/* <h1>UPLOAD A FILE</h1>
-          {this.state.success ? <SuccessMessage/> : null}
-          {this.state.error ? <ErrorMessage/> : null}
-          <input onChange={this.handleChange} ref={(ref) => { this.uploadInput = ref; }} type="file"/>
-          <br/>
-          <button onClick={this.handleUpload}>UPLOAD</button> */}
+        { !hasRecorded
+        ? <VideoRecorder onVideoRecorded={this.uploadVideo}/>
+        : <UploadingScreen hasUploaded={hasUploaded}/>
+        }
       </div>
     );
   }
