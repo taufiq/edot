@@ -48,6 +48,7 @@ class VideoRecorder extends Component {
   onVideoPlay = async () => {
     let video = this.videoRef.current;
     let canvas = this.canvasRef.current;
+    if (video == null) return
     let gridCanvas = this.gridCanvasRef.current;
     gridCanvas.width = video.offsetWidth;
     gridCanvas.height = video.offsetHeight;
@@ -56,16 +57,16 @@ class VideoRecorder extends Component {
       // Draw face grid
       if (!this.state.isFaceAligned) {
         let ctx = gridCanvas.getContext('2d')
-        ctx.lineWidth = 12;
+        ctx.lineWidth = 5;
         ctx.beginPath();
-        ctx.ellipse(gridCanvas.width/2, gridCanvas.height/2, gridCanvas.width/6, gridCanvas.width/6*1.2, 0, 0, 2 * Math.PI);
+        ctx.ellipse(gridCanvas.width/2, gridCanvas.height/2, gridCanvas.width/4, gridCanvas.width/4*1.2, 0, 0, 2 * Math.PI);
         ctx.stroke()
       } else {
         let ctx = gridCanvas.getContext('2d')
         ctx.strokeStyle = 'red';
-        ctx.lineWidth = 12;
+        ctx.lineWidth = 5;
         ctx.beginPath();
-        ctx.ellipse(gridCanvas.width/2, gridCanvas.height/2 +  + gridCanvas.width/12, gridCanvas.width/12*1.2, gridCanvas.width/12, 0, 0, 2 * Math.PI);
+        ctx.ellipse(gridCanvas.width/2, gridCanvas.height/2 +  + gridCanvas.width/7, gridCanvas.width/7, gridCanvas.width/7, 0, 0, 2 * Math.PI);
         ctx.stroke()
       }
 

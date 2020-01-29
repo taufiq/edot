@@ -72,15 +72,17 @@ class App extends Component {
     const { s3Instance } = this.state;
     this.setState({ hasRecorded: true })
     let uploadParams = {Bucket: 'edot', Key: `tanahkow-${new Date().toISOString()}.webm`, Body: video};
-    setTimeout(() => this.setState({ hasUploaded: true }), 2000)
-    // s3Instance.upload(uploadParams, {}, function (err, data) {
-    //   if (err) {
-    //     console.error('error', err)
-    //   }
-    //   else {
-    //     console.log('uploaded!')
-    //   }
-    // })
+    // setTimeout(() => this.setState({ hasUploaded: true }), 2000)
+    s3Instance.upload(uploadParams, {}, (err, data) => {
+      if (err) {
+        this.setState({ hasUploaded: true })
+        console.error('error', err)
+      }
+      else {
+        this.setState({ hasUploaded: true })
+        console.log('uploaded!')
+      }
+    })
   }
 
 

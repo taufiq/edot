@@ -16,6 +16,7 @@
   color: white;
   text-transform: uppercase;
   font-weight: 600;
+  font-size: 12px;
   outline: none;
 }
 
@@ -47,6 +48,7 @@
   position: absolute !important;
   top: 0;
   left: 50%;
+  width: 100%;
   transform: translate(-50%, 0);
 }
 
