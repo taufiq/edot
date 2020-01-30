@@ -85,7 +85,7 @@ class VideoRecorder extends Component {
           if (distanceFromCenter < 50) {this.setState({ isFaceAligned: true })}
         }
         // draw the detection onto canvas
-        // faceapi.draw.drawDetections(canvas, resizedResults)
+        faceapi.draw.drawDetections(canvas, resizedResults)
       }
       setTimeout(() => this.onVideoPlay())
     } catch (error) {
@@ -128,13 +128,15 @@ class VideoRecorder extends Component {
     const { isRecording, isFaceAligned, loaded, hasGoodLighting } = this.state;
     return (
       <div style={{ position: "relative" }}>
-        <video playsInline autoPlay ref={this.videoRef} onPlay={this.onVideoPlay} style={{ width: '100%' }}></video>
-        <canvas
-          ref={this.canvasRef}
-          style={{ position: 'absolute', left: '0'}}/>
-        <canvas
-          ref={this.gridCanvasRef}
-          style={{ position: 'absolute', left: '0'}}/>
+        <div style={{ transform: 'rotateY(180deg)' }}>
+          <video playsInline autoPlay ref={this.videoRef} onPlay={this.onVideoPlay} style={{ width: '100%' }}></video>
+          <canvas
+            ref={this.canvasRef}
+            style={{ position: 'absolute', left: '0'}}/>
+          <canvas
+            ref={this.gridCanvasRef}
+            style={{ position: 'absolute', left: '0'}}/>
+        </div>
         <button
           className={!isFaceAligned ? 'record record-disabled' : (isRecording ? 'record record-stop' : 'record record-start')}
           disabled={!isFaceAligned}
