@@ -137,16 +137,17 @@ class VideoRecorder extends Component {
       if (result) {
         // Resizes canvas to video
         faceapi.matchDimensions(faceCanvas, displaySize)
+        const resizedResults = faceapi.resizeResults(result, displaySize)
 
         if (!this.state.isFaceAligned) {
-          const boxCenterCoordinates = new Point(result.box.topRight.add(result.box.bottomLeft).x/2, result.box.topRight.add(result.box.bottomLeft).y/2)
+          const boxCenterCoordinates = new Point(resizedResults.box.topRight.add(resizedResults.box.bottomLeft).x/2, resizedResults.box.topRight.add(resizedResults.box.bottomLeft).y/2)
           const canvasCenterCoordinates = new Point(displaySize.width/2, displaySize.height/2);
           const distanceFromCenter = canvasCenterCoordinates.sub(boxCenterCoordinates).abs().magnitude()
           // Check if bounding face box is within a certain distance from canvas center
           if (distanceFromCenter < 50) {this.setState({ isFaceAligned: true })}
         }
         // draw the detection onto canvas
-        faceapi.draw.drawDetections(faceCanvas, result)
+        faceapi.draw.drawDetections(faceCanvas, resizedResults)
         // faceapi.draw.drawFaceLandmarks(faceCanvas, result)
       }
       setTimeout(() => this.onVideoPlay())
@@ -206,7 +207,7 @@ class VideoRecorder extends Component {
           {/* Canvas to copy video stream for brightness check */}
           <canvas
             ref={this.cameraCanvasRef}
-            style={{ width: '100%', height:'100%', left: '0'}} />
+            style={{ width: '100%', height:'100%', left: '0', opacity: '0', position: 'absolute' }} />
 
         </div>
         <button
