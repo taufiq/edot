@@ -19,22 +19,22 @@ class VideoRecorder extends Component {
       loaded: false,
     };
     this.videoRef = React.createRef();
-    this.canvasRef = React.createRef();
+    this.faceCanvasRef = React.createRef();
     this.gridCanvasRef = React.createRef();
+    this.cameraCanvasRef = React.createRef();
   }
 
   async componentDidMount() {
     const MODEL_URL = '/models'
     await faceapi.loadTinyFaceDetectorModel(MODEL_URL)
-    // await faceapi.loadSsdMobilenetv1Model(MODEL_URL)
-    let canvas = this.canvasRef.current;
-
+    await faceapi.loadFaceLandmarkModel(MODEL_URL)
 
     navigator.mediaDevices.getUserMedia(constraints)
       .then((stream) => {
         let video = this.videoRef.current;
         video.srcObject = stream;
         video.volume = 0;
+        video.muted = true;
 
         let recorder = RecordRTC(stream, {
           type: 'video'
@@ -45,47 +45,109 @@ class VideoRecorder extends Component {
       })
       .catch((error) => console.error(error))
   }
+
+  getBrightness = (canvas) => {
+    const { data } = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height)
+    var r,g,b,avg;
+    var colorSum = 0;
+    for(var x = 0, len = data.length; x < len; x+=4) {
+      r = data[x];
+      g = data[x+1];
+      b = data[x+2];
+
+      avg = Math.floor((r+g+b)/3);
+      colorSum += avg;
+    }
+    const brightness = Math.floor(colorSum / (canvas.width*canvas.height));
+    return brightness;
+  }
+
+  /**
+   * config => {
+   *    lineWidth: 1,
+   *    strokeStyle: 'red',
+   *    dimensions: {x:, y:, w:, h:}
+   * }
+   */
+  drawEllipse = (canvas, config = { lineWidth: 1, color: 'red', width: canvas.width, height: canvas.height, x: 0, y: 0 }) => {
+    let ctx = canvas.getContext('2d')
+    ctx.lineWidth = config.lineWidth;
+    ctx.strokeStyle = config.color;
+    ctx.beginPath();
+    ctx.ellipse(config.x, config.y, config.width, config.height, 0, 0, 2 * Math.PI);
+    ctx.stroke()
+  }
+
+  drawFaceBox = (canvas, faceDetection) => {
+
+  }
+
   onVideoPlay = async () => {
     let video = this.videoRef.current;
-    let canvas = this.canvasRef.current;
+    let faceCanvas = this.faceCanvasRef.current;
     if (video == null) return
     let gridCanvas = this.gridCanvasRef.current;
-    gridCanvas.width = video.offsetWidth;
-    gridCanvas.height = video.offsetHeight;
+    let cameraCanvas = this.cameraCanvasRef.current;
+    // let displaySize = {
+    //   width: video.offsetWidth,
+    //   height: video.offsetHeight,
+    // }
+    const displaySize = { width: video.offsetWidth, height: video.offsetHeight }
+
+    // Sets dimensions of canvases to video's
+    gridCanvas.width = displaySize.width;
+    gridCanvas.height = displaySize.height;
+    cameraCanvas.width = displaySize.width;
+    cameraCanvas.height = displaySize.height;
+
+    cameraCanvas.getContext('2d').drawImage(video, 0, 0)
+    const brightness = this.getBrightness(cameraCanvas);
+    if (brightness > 100) {
+      this.setState({ hasGoodLighting: true })
+    } else {
+      if (!this.state.isRecording) this.setState({ hasGoodLighting: false })
+    }
     
     try {
       // Draw face grid
       if (!this.state.isFaceAligned) {
-        let ctx = gridCanvas.getContext('2d')
-        ctx.lineWidth = 5;
-        ctx.beginPath();
-        ctx.ellipse(gridCanvas.width/2, gridCanvas.height/2, gridCanvas.width/4, gridCanvas.width/4*1.2, 0, 0, 2 * Math.PI);
-        ctx.stroke()
+        // Guide to align face
+        this.drawEllipse(gridCanvas, {
+          lineWidth: 5,
+          x: gridCanvas.width/2,
+          y: gridCanvas.height/2,
+          width: gridCanvas.width/4,
+          height: gridCanvas.width/4*1.2
+        })
       } else {
-        let ctx = gridCanvas.getContext('2d')
-        ctx.strokeStyle = 'red';
-        ctx.lineWidth = 5;
-        ctx.beginPath();
-        ctx.ellipse(gridCanvas.width/2, gridCanvas.height/2 +  + gridCanvas.width/7, gridCanvas.width/7, gridCanvas.width/7, 0, 0, 2 * Math.PI);
-        ctx.stroke()
+        // Guide to align mouth
+        this.drawEllipse(gridCanvas, {
+          lineWidth: 5,
+          color: 'red',
+          x: gridCanvas.width/2,
+          y: gridCanvas.height/2 + gridCanvas.width/7,
+          width: gridCanvas.width/7,
+          height: gridCanvas.width/7
+        })
       }
 
       const result = await faceapi.detectSingleFace(video, new TinyFaceDetectorOptions({ scoreThreshold: 0.5, inputSize: 256 }))
       if (!this.state.loaded) this.setState({ loaded: true })
-      const displaySize = { width: video.offsetWidth, height: video.offsetHeight }
 
       if (result) {
-        const dims = faceapi.matchDimensions(canvas, displaySize)
-        // To resize the bounding box with respect to the canvas size
-        const resizedResults = faceapi.resizeResults(result, dims)
+        // Resizes canvas to video
+        faceapi.matchDimensions(faceCanvas, displaySize)
+
         if (!this.state.isFaceAligned) {
-          const boxCenterCoordinates = new Point(resizedResults.box.topRight.add(resizedResults.box.bottomLeft).x/2, resizedResults.box.topRight.add(resizedResults.box.bottomLeft).y/2)
-          const canvasCenterCoordinates = new Point(canvas.width/2, canvas.height/2);
+          const boxCenterCoordinates = new Point(result.box.topRight.add(result.box.bottomLeft).x/2, result.box.topRight.add(result.box.bottomLeft).y/2)
+          const canvasCenterCoordinates = new Point(displaySize.width/2, displaySize.height/2);
           const distanceFromCenter = canvasCenterCoordinates.sub(boxCenterCoordinates).abs().magnitude()
+          // Check if bounding face box is within a certain distance from canvas center
           if (distanceFromCenter < 50) {this.setState({ isFaceAligned: true })}
         }
         // draw the detection onto canvas
-        faceapi.draw.drawDetections(canvas, resizedResults)
+        faceapi.draw.drawDetections(faceCanvas, result)
+        // faceapi.draw.drawFaceLandmarks(faceCanvas, result)
       }
       setTimeout(() => this.onVideoPlay())
     } catch (error) {
@@ -128,14 +190,24 @@ class VideoRecorder extends Component {
     const { isRecording, isFaceAligned, loaded, hasGoodLighting } = this.state;
     return (
       <div style={{ position: "relative" }}>
-        <div style={{ transform: 'rotateY(180deg)' }}>
+        <div style={{ transform: 'rotateY(180deg)', display: 'flex', justifyContent: 'center' }}>
           <video playsInline autoPlay ref={this.videoRef} onPlay={this.onVideoPlay} style={{ width: '100%' }}></video>
+
+          {/* Canvas to draw face detection boxes/landmarks */}
           <canvas
-            ref={this.canvasRef}
+            ref={this.faceCanvasRef}
             style={{ position: 'absolute', left: '0'}}/>
+
+          {/* Canvas to draw facial grid guides */}
           <canvas
             ref={this.gridCanvasRef}
             style={{ position: 'absolute', left: '0'}}/>
+
+          {/* Canvas to copy video stream for brightness check */}
+          <canvas
+            ref={this.cameraCanvasRef}
+            style={{ width: '100%', height:'100%', left: '0'}} />
+
         </div>
         <button
           className={!isFaceAligned ? 'record record-disabled' : (isRecording ? 'record record-stop' : 'record record-start')}
@@ -153,18 +225,18 @@ class VideoRecorder extends Component {
           )
         }
         {
-          loaded && !isFaceAligned && (
+          loaded && !isFaceAligned && !hasGoodLighting && (
             <div className=" hover-top alert alert-warning" role="alert">
-              Please align your face to the grid
+              Please ensure there is good lighting
             </div>
           )
         }
         {
-          // loaded && isFaceAligned && !hasGoodLighting && (
-          //   <div className=" hover-top alert alert-warning" role="alert">
-          //     Please ensure there is good lighting
-          //   </div>
-          // )
+          loaded && !isFaceAligned && hasGoodLighting && (
+            <div className=" hover-top alert alert-warning" role="alert">
+              Please align your face to the grid
+            </div>
+          )
         }
         {
           loaded && isFaceAligned && (
