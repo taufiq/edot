@@ -1,5 +1,5 @@
 .App {
-  height: 100%;
+  height: 100vh;
 }
 
 .App-logo {
@@ -8,21 +8,19 @@
 }
 
 .record {
-  width: 64px;
-	height: 64px;
-	background-color: red;
+  width: 40px;
+	height: 40px;
+	background-color: #FF4E4A;
 	border: 0;
-  border-radius: 64px;
+  border-radius: 40px;
   color: white;
-  text-transform: uppercase;
-  font-weight: 600;
-  font-size: 12px;
   outline: none;
+  margin-bottom: 24px;
 }
 
 
 .record-disabled {
-	background-color: grey;
+	background-color: white;
 }
 
 .record-stop{
@@ -30,6 +28,20 @@
 	animation-duration: 1.5s;
 	animation-iteration-count: infinite;
 	animation-timing-function: linear;
+}
+
+button {
+  background-color: #FF4E4A;
+  border-width: 0 !important;
+  color: white;
+}
+
+.bg-confirm {
+  background-color: #71B112;
+}
+
+.background {
+  z-index: -1;
 }
 
 @keyframes pulse{

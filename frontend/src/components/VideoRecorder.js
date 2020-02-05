@@ -1,7 +1,8 @@
 import React, { Component } from 'react';
 import RecordRTC from 'recordrtc';
 import * as faceapi from 'face-api.js';
-import { TinyFaceDetectorOptions, SsdMobilenetv1Options, Point } from 'face-api.js';
+import { TinyFaceDetectorOptions, Point } from 'face-api.js';
+import ToastBox from './ToastBox';
 
 let constraints = {
   audio: true,
@@ -72,7 +73,7 @@ class VideoRecorder extends Component {
   drawEllipse = (canvas, config = { lineWidth: 1, color: 'red', width: canvas.width, height: canvas.height, x: 0, y: 0 }) => {
     let ctx = canvas.getContext('2d')
     ctx.lineWidth = config.lineWidth;
-    ctx.strokeStyle = config.color;
+    ctx.strokeStyle = config.color || 'white';
     ctx.beginPath();
     ctx.ellipse(config.x, config.y, config.width, config.height, 0, 0, 2 * Math.PI);
     ctx.stroke()
@@ -92,7 +93,7 @@ class VideoRecorder extends Component {
     //   width: video.offsetWidth,
     //   height: video.offsetHeight,
     // }
-    const displaySize = { width: video.offsetWidth, height: video.offsetHeight }
+    const displaySize = { width: video.clientWidth, height: video.clientHeight }
 
     // Sets dimensions of canvases to video's
     gridCanvas.width = displaySize.width;
@@ -102,7 +103,7 @@ class VideoRecorder extends Component {
 
     cameraCanvas.getContext('2d').drawImage(video, 0, 0)
     const brightness = this.getBrightness(cameraCanvas);
-    if (brightness > 100) {
+    if (brightness > 60) {
       this.setState({ hasGoodLighting: true })
     } else {
       if (!this.state.isRecording) this.setState({ hasGoodLighting: false })
@@ -110,7 +111,7 @@ class VideoRecorder extends Component {
     
     try {
       // Draw face grid
-      if (!this.state.isFaceAligned) {
+      if (!this.state.isFaceAligned && this.state.hasGoodLighting) {
         // Guide to align face
         this.drawEllipse(gridCanvas, {
           lineWidth: 5,
@@ -119,20 +120,20 @@ class VideoRecorder extends Component {
           width: gridCanvas.width/4,
           height: gridCanvas.width/4*1.2
         })
-      } else {
+      } else if (this.state.hasGoodLighting && this.state.isFaceAligned) {
         // Guide to align mouth
         this.drawEllipse(gridCanvas, {
           lineWidth: 5,
-          color: 'red',
           x: gridCanvas.width/2,
           y: gridCanvas.height/2 + gridCanvas.width/7,
-          width: gridCanvas.width/7,
-          height: gridCanvas.width/7
+          width: gridCanvas.width/5,
+          height: gridCanvas.width/10
         })
       }
 
-      const result = await faceapi.detectSingleFace(video, new TinyFaceDetectorOptions({ scoreThreshold: 0.5, inputSize: 256 }))
       if (!this.state.loaded) this.setState({ loaded: true })
+      if (this.state.hasGoodLighting) {
+      const result = await faceapi.detectSingleFace(video, new TinyFaceDetectorOptions({ scoreThreshold: 0.5, inputSize: 256 }))
 
       if (result) {
         // Resizes canvas to video
@@ -150,6 +151,7 @@ class VideoRecorder extends Component {
         faceapi.draw.drawDetections(faceCanvas, resizedResults)
         // faceapi.draw.drawFaceLandmarks(faceCanvas, result)
       }
+    }
       setTimeout(() => this.onVideoPlay())
     } catch (error) {
       console.log('error', error)
@@ -190,64 +192,71 @@ class VideoRecorder extends Component {
   render() {
     const { isRecording, isFaceAligned, loaded, hasGoodLighting } = this.state;
     return (
-      <div style={{ position: "relative" }}>
-        <div style={{ transform: 'rotateY(180deg)', display: 'flex', justifyContent: 'center' }}>
-          <video playsInline autoPlay ref={this.videoRef} onPlay={this.onVideoPlay} style={{ width: '100%' }}></video>
+      <>
+        <div style={{ transform: 'rotateY(180deg)', display: 'flex', justifyContent: 'center', height: '100vh', alignItems: 'center' }}>
+          <video playsInline autoPlay ref={this.videoRef} onPlay={this.onVideoPlay} style={{ height: '100%', objectFit: 'cover' }}></video>
 
           {/* Canvas to draw face detection boxes/landmarks */}
           <canvas
+            id="face-box"
             ref={this.faceCanvasRef}
-            style={{ position: 'absolute', left: '0'}}/>
+            style={{width: '100%', height:'100%', position: 'absolute', left: '0'}}/>
 
           {/* Canvas to draw facial grid guides */}
           <canvas
+            id="guide-grid"
             ref={this.gridCanvasRef}
-            style={{ position: 'absolute', left: '0'}}/>
+            style={{width: '100%', height:'100%', position: 'absolute', left: '0'}}/>
 
           {/* Canvas to copy video stream for brightness check */}
           <canvas
+            id="brightness-check"
             ref={this.cameraCanvasRef}
-            style={{ width: '100%', height:'100%', left: '0', opacity: '0', position: 'absolute' }} />
+            style={{ opacity: '0', position: 'absolute' }} />
 
         </div>
         <button
-          className={!isFaceAligned ? 'record record-disabled' : (isRecording ? 'record record-stop' : 'record record-start')}
-          disabled={!isFaceAligned}
+          className={!isFaceAligned && !hasGoodLighting ? 'record record-disabled' : (isRecording ? 'record record-stop' : 'record record-start')}
+          disabled={!isFaceAligned && !hasGoodLighting}
           onClick={isRecording ? this.stopRecording : this.startRecording}
           style={{ position: 'absolute', left: '50%', bottom: '0', transform: 'translate(-50%, 0)' }}
         >
-          {isRecording ? 'Stop' : 'Start'}
+          {/* {isRecording ? 'Stop' : 'Start'} */}
+          <i className="fas fa-video fa-xs" style={{ color: isFaceAligned && hasGoodLighting ? '#fff' : '#4D4D4D' }}/>
         </button>
         {
           !loaded && (
-            <div className=" hover-top alert alert-warning" role="alert">
-              Loading...
-            </div>
+            <ToastBox
+            message="Loading..."
+            type="warning"
+            icon="fas fa-spinner" />
           )
         }
         {
           loaded && !isFaceAligned && !hasGoodLighting && (
-            <div className=" hover-top alert alert-warning" role="alert">
-              Please ensure there is good lighting
-            </div>
+            <ToastBox
+            message="Turn on the light!"
+            type="warning"
+            icon="far fa-lightbulb" />
           )
         }
         {
           loaded && !isFaceAligned && hasGoodLighting && (
-            <div className=" hover-top alert alert-warning" role="alert">
-              Please align your face to the grid
-            </div>
+            <ToastBox
+            message="Match your face to the circle"
+            header="2" />
           )
         }
         {
-          loaded && isFaceAligned && (
-            <div className="hover-top alert alert-success" role="alert">
-              You may now record! Align your mouth to the grid when consuming the medicine
-            </div>
+          loaded && isFaceAligned && hasGoodLighting && (
+            <ToastBox
+            message="Start recording!"
+            type="success"
+            icon="fas fa-video" />
           )
         }
         {/* <button onClick={this.stopRecording}>Stop Recording</button> */}
-      </div>
+        </>
     )
   }
 }
