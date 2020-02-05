@@ -8,11 +8,11 @@
 }
 
 .record {
-  width: 40px;
-	height: 40px;
+  width: 56px;
+	height: 56px;
 	background-color: #FF4E4A;
 	border: 0;
-  border-radius: 40px;
+  border-radius: 56px;
   color: white;
   outline: none;
   margin-bottom: 24px;
