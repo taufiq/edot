@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import RecordRTC from 'recordrtc';
 import * as faceapi from 'face-api.js';
-import { TinyFaceDetectorOptions, Point } from 'face-api.js';
+// import { TinyFaceDetectorOptions, Point } from 'face-api.js';
 import ToastBox from './ToastBox';
 
 let constraints = {
@@ -85,7 +85,7 @@ class VideoRecorder extends Component {
 
   onVideoPlay = async () => {
     let video = this.videoRef.current;
-    let faceCanvas = this.faceCanvasRef.current;
+    // let faceCanvas = this.faceCanvasRef.current;
     if (video == null) return
     let gridCanvas = this.gridCanvasRef.current;
     let cameraCanvas = this.cameraCanvasRef.current;
@@ -111,16 +111,16 @@ class VideoRecorder extends Component {
     
     try {
       // Draw face grid
-      if (!this.state.isFaceAligned && this.state.hasGoodLighting) {
+      // if (!this.state.isFaceAligned && this.state.hasGoodLighting) {
         // Guide to align face
-        this.drawEllipse(gridCanvas, {
-          lineWidth: 5,
-          x: gridCanvas.width/2,
-          y: gridCanvas.height/2,
-          width: gridCanvas.width/4,
-          height: gridCanvas.width/4*1.2
-        })
-      } else if (this.state.hasGoodLighting && this.state.isFaceAligned) {
+        // this.drawEllipse(gridCanvas, {
+        //   lineWidth: 5,
+        //   x: gridCanvas.width/2,
+        //   y: gridCanvas.height/2,
+        //   width: gridCanvas.width/4,
+        //   height: gridCanvas.width/4*1.2
+        // })
+      if (this.state.hasGoodLighting) {
         // Guide to align mouth
         this.drawEllipse(gridCanvas, {
           lineWidth: 5,
@@ -132,26 +132,30 @@ class VideoRecorder extends Component {
       }
 
       if (!this.state.loaded) this.setState({ loaded: true })
-      if (this.state.hasGoodLighting) {
-      const result = await faceapi.detectSingleFace(video, new TinyFaceDetectorOptions({ scoreThreshold: 0.5, inputSize: 256 }))
 
-      if (result) {
-        // Resizes canvas to video
-        faceapi.matchDimensions(faceCanvas, displaySize)
-        const resizedResults = faceapi.resizeResults(result, displaySize)
+      /**
+       * Face detection
+       */
+    //   if (this.state.hasGoodLighting) {
+    //   const result = await faceapi.detectSingleFace(video, new TinyFaceDetectorOptions({ scoreThreshold: 0.5, inputSize: 256 }))
 
-        if (!this.state.isFaceAligned) {
-          const boxCenterCoordinates = new Point(resizedResults.box.topRight.add(resizedResults.box.bottomLeft).x/2, resizedResults.box.topRight.add(resizedResults.box.bottomLeft).y/2)
-          const canvasCenterCoordinates = new Point(displaySize.width/2, displaySize.height/2);
-          const distanceFromCenter = canvasCenterCoordinates.sub(boxCenterCoordinates).abs().magnitude()
-          // Check if bounding face box is within a certain distance from canvas center
-          if (distanceFromCenter < 50) {this.setState({ isFaceAligned: true })}
-        }
-        // draw the detection onto canvas
-        faceapi.draw.drawDetections(faceCanvas, resizedResults)
-        // faceapi.draw.drawFaceLandmarks(faceCanvas, result)
-      }
-    }
+    //   if (result) {
+    //     // Resizes canvas to video
+    //     faceapi.matchDimensions(faceCanvas, displaySize)
+    //     const resizedResults = faceapi.resizeResults(result, displaySize)
+
+    //     if (!this.state.isFaceAligned) {
+    //       const boxCenterCoordinates = new Point(resizedResults.box.topRight.add(resizedResults.box.bottomLeft).x/2, resizedResults.box.topRight.add(resizedResults.box.bottomLeft).y/2)
+    //       const canvasCenterCoordinates = new Point(displaySize.width/2, displaySize.height/2);
+    //       const distanceFromCenter = canvasCenterCoordinates.sub(boxCenterCoordinates).abs().magnitude()
+    //       // Check if bounding face box is within a certain distance from canvas center
+    //       if (distanceFromCenter < 50) {this.setState({ isFaceAligned: true })}
+    //     }
+    //     // draw the detection onto canvas
+    //     faceapi.draw.drawDetections(faceCanvas, resizedResults)
+    //     // faceapi.draw.drawFaceLandmarks(faceCanvas, result)
+    //   }
+    // }
       setTimeout(() => this.onVideoPlay())
     } catch (error) {
       console.log('error', error)
@@ -193,7 +197,7 @@ class VideoRecorder extends Component {
     const { isRecording, isFaceAligned, loaded, hasGoodLighting } = this.state;
     return (
       <>
-        <div style={{ transform: 'rotateY(180deg)', display: 'flex', justifyContent: 'center', height: '100vh', alignItems: 'center' }}>
+        <div style={{ transform: 'rotateY(180deg)', display: 'flex', justifyContent: 'center', height: '100vh', alignItems: 'center', overflow: 'hidden' }}>
           <video playsInline autoPlay ref={this.videoRef} onPlay={this.onVideoPlay} style={{ height: '100%', objectFit: 'cover' }}></video>
 
           {/* Canvas to draw face detection boxes/landmarks */}
@@ -216,13 +220,13 @@ class VideoRecorder extends Component {
 
         </div>
         <button
-          className={!isFaceAligned && !hasGoodLighting ? 'record record-disabled' : (isRecording ? 'record record-stop' : 'record record-start')}
-          disabled={!isFaceAligned && !hasGoodLighting}
+          className={!hasGoodLighting ? 'record record-disabled' : (isRecording ? 'record record-stop' : 'record record-start')}
+          disabled={!hasGoodLighting}
           onClick={isRecording ? this.stopRecording : this.startRecording}
-          style={{ position: 'absolute', left: '50%', bottom: '0', transform: 'translate(-50%, 0)' }}
+          style={{ position: 'absolute', left: '50%', bottom: '0', transform: 'translate(-50%, 0)', display: 'flex', justifyContent: 'center' }}
         >
           {/* {isRecording ? 'Stop' : 'Start'} */}
-          <i className="fas fa-video fa-xs" style={{ color: isFaceAligned && hasGoodLighting ? '#fff' : '#4D4D4D' }}/>
+          <i className="fas fa-video fa-sm" style={{ color: hasGoodLighting ? '#fff' : '#4D4D4D' }}/>
         </button>
         {
           !loaded && (
@@ -233,22 +237,22 @@ class VideoRecorder extends Component {
           )
         }
         {
-          loaded && !isFaceAligned && !hasGoodLighting && (
+          loaded && !hasGoodLighting && (
             <ToastBox
             message="Turn on the light!"
             type="warning"
             icon="far fa-lightbulb" />
           )
         }
-        {
+        {/* {
           loaded && !isFaceAligned && hasGoodLighting && (
             <ToastBox
             message="Match your face to the circle"
             header="2" />
           )
-        }
+        } */}
         {
-          loaded && isFaceAligned && hasGoodLighting && (
+          loaded && hasGoodLighting && (
             <ToastBox
             message="Start recording!"
             type="success"
