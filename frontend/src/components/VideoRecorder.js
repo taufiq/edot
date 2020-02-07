@@ -3,6 +3,8 @@ import RecordRTC from 'recordrtc';
 import * as faceapi from 'face-api.js';
 // import { TinyFaceDetectorOptions, Point } from 'face-api.js';
 import ToastBox from './ToastBox';
+import ProgressBar from './ProgressBar';
+import CryptoJS from 'crypto-js';
 
 let constraints = {
   audio: true,
@@ -18,6 +20,8 @@ class VideoRecorder extends Component {
       isFaceAligned: false,
       hasGoodLighting: false,
       loaded: false,
+      brightness: 0,
+      recorded: false,
     };
     this.videoRef = React.createRef();
     this.faceCanvasRef = React.createRef();
@@ -47,6 +51,9 @@ class VideoRecorder extends Component {
       .catch((error) => console.error(error))
   }
 
+  componentDidUpdate(prevProps, prevState) {
+
+  }
   getBrightness = (canvas) => {
     const { data } = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height)
     var r,g,b,avg;
@@ -60,6 +67,7 @@ class VideoRecorder extends Component {
       colorSum += avg;
     }
     const brightness = Math.floor(colorSum / (canvas.width*canvas.height));
+    this.setState({ brightness })
     return brightness;
   }
 
@@ -77,10 +85,6 @@ class VideoRecorder extends Component {
     ctx.beginPath();
     ctx.ellipse(config.x, config.y, config.width, config.height, 0, 0, 2 * Math.PI);
     ctx.stroke()
-  }
-
-  drawFaceBox = (canvas, faceDetection) => {
-
   }
 
   onVideoPlay = async () => {
@@ -103,7 +107,7 @@ class VideoRecorder extends Component {
 
     cameraCanvas.getContext('2d').drawImage(video, 0, 0)
     const brightness = this.getBrightness(cameraCanvas);
-    if (brightness > 60) {
+    if (brightness > 70) {
       this.setState({ hasGoodLighting: true })
     } else {
       if (!this.state.isRecording) this.setState({ hasGoodLighting: false })
@@ -184,9 +188,15 @@ class VideoRecorder extends Component {
       // const videoFile = new File([recordedVideoBlob], 'tanahkow.webm');
       const reader = new FileReader()
       reader.onload = (event) => {
-        this.props.onVideoRecorded(event.target.result);
+        const arrayBuffer = event.target.result;
+        const wordArray = CryptoJS.lib.WordArray.create(arrayBuffer)
+        console.log(event.target.result)
+        const hash = CryptoJS.MD5(arrayBuffer)
+        const hashBase64 = hash.toString(CryptoJS.enc.Base64);
+        this.props.onVideoRecorded(event.target.result, hashBase64, hash.toString());
+        this.setState({ recorded: true })
       }
-      reader.readAsArrayBuffer(recordedVideoBlob)
+      reader.readAsBinaryString(recordedVideoBlob)
 
       recorder.camera.stop();
       recorder.destroy();
@@ -194,7 +204,7 @@ class VideoRecorder extends Component {
   }
 
   render() {
-    const { isRecording, isFaceAligned, loaded, hasGoodLighting } = this.state;
+    const { isRecording, recorded, loaded, hasGoodLighting } = this.state;
     return (
       <>
         <div style={{ transform: 'rotateY(180deg)', display: 'flex', justifyContent: 'center', height: '100vh', alignItems: 'center', overflow: 'hidden' }}>
@@ -252,14 +262,31 @@ class VideoRecorder extends Component {
           )
         } */}
         {
-          loaded && hasGoodLighting && (
+          loaded && hasGoodLighting && !isRecording && (
             <ToastBox
             message="Start recording!"
             type="success"
             icon="fas fa-video" />
           )
         }
+        {
+          isRecording && (
+            <ToastBox
+            message="Match your mouth to the circle when eating pills, stop when you are done"
+            type="failure" />
+          )
+        }
+        {
+          recorded && (
+            <ToastBox
+            message="Uploading your video..."
+            type="success" />
+          )
+        }
         {/* <button onClick={this.stopRecording}>Stop Recording</button> */}
+        <div className="fixed-bottom" style={{ color: 'white' }}>
+          <p>{this.state.brightness}</p>
+        </div>
         </>
     )
   }
