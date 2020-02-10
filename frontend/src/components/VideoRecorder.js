@@ -190,13 +190,11 @@ class VideoRecorder extends Component {
       reader.onload = (event) => {
         const arrayBuffer = event.target.result;
         const wordArray = CryptoJS.lib.WordArray.create(arrayBuffer)
-        console.log(event.target.result)
-        const hash = CryptoJS.MD5(arrayBuffer)
-        const hashBase64 = hash.toString(CryptoJS.enc.Base64);
-        this.props.onVideoRecorded(event.target.result, hashBase64, hash.toString());
+        const hash = CryptoJS.MD5(wordArray).toString(CryptoJS.enc.Base64)
+        this.props.onVideoRecorded(event.target.result, hash);
         this.setState({ recorded: true })
       }
-      reader.readAsBinaryString(recordedVideoBlob)
+      reader.readAsArrayBuffer(recordedVideoBlob)
 
       recorder.camera.stop();
       recorder.destroy();

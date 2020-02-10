@@ -39,34 +39,35 @@ class App extends Component {
     this.setState({ s3Instance: s3 })
   }
   
-  uploadVideo = async (video, hashBase64, hash) => {
+  uploadVideo = async (video, hash) => {
     const BASE_URL = 'http://localhost:8081'
-    // try {
-    //   const { data: postData } = await axios.post(`http://localhost:8081/videos`, {
-    //     fileMd5Hash: hashBase64,
-    //     fileType: "video/webm",
-    //     patientId: "153bbc3b-99aa-4906-8eec-b58ea47af86a",
-    //   });
-    //   console.log(postData)
-    //   let formData = new FormData()
-    //   Object.entries(postData.fields).forEach(([k, v]) => formData.append(k, v))
-    //   formData.set('Content-MD5', hashBase64)
-    //   console.log(hash, hashBase64, formData.values())
-    //   formData.append('file', video)
-    //   axios.post(postData.url, formData, {
-    //     'Content-Type': undefined, // In order for the boundary to be automatically set
-    //     withCredentials: true,
-    //   })
-    //   .then(v => {
-    //     console.log(v)
-    //   })
-    // } catch (error) {
-    //   console.log(error)
-    // }
-    const { s3Instance } = this.state;
-    const patientId = '4bd2e105-fa29-4526-954f-d9dd2f4805f3';
-    this.setState({ hasRecorded: true })
-    let uploadParams = {Bucket: 'edot.open.gov.sg', Key: `${patientId}-${moment().format('DDMMYYYY')}.webm`, Body: video};
+    const patientId = ''
+    try {
+      const { data: postData } = await axios.post(`http://localhost:8081/videos`, {
+        fileMd5Hash: hash,
+        fileType: "video/webm",
+        patientId,
+      });
+      console.log(postData)
+      let formData = new FormData()
+      Object.entries(postData.fields).forEach(([k, v]) => formData.append(k, v))
+      formData.set('Content-MD5', hash)
+      formData.append('file', video)
+
+      // To retrieve presigned payload
+      // This doesn't work, due to some md5 mismatch
+      const presignedPostResp = await axios.post(postData.url, formData, {
+        'Content-Type': undefined, // In order for the boundary to be automatically set
+        withCredentials: true,
+      })
+      .then(v => {
+        console.log(v)
+      })
+    } catch (error) {
+      console.log(error)
+    }
+    // const { s3Instance } = this.state;
+    // let uploadParams = {Bucket: 'edot', Key: `${patientId}-${moment().format('DDMMYYYY')}.webm`, Body: video};
     // setTimeout(() => this.setState({ hasUploaded: true }), 2000)
     // s3Instance.upload(uploadParams, {}, (err, data) => {
     //   if (err) {
@@ -77,8 +78,14 @@ class App extends Component {
     //     console.log('uploaded!', data)
     //   }
     // })
+
+    /**
+     * Neither does this, it is the next instruction to carry out
+     * this will then send URL of the uploaded video. But since the video can't be uploaded,
+     * this is dysfunctional
+     */
     axios.put(`${BASE_URL}/videos`, {
-      videoLink: 'https://ia801602.us.archive.org/11/items/Rick_Astley_Never_Gonna_Give_You_Up/Rick_Astley_Never_Gonna_Give_You_Up.mp4',
+      videoLink: video,
       sideEffects: false,
       patientId,
     })
@@ -87,7 +94,7 @@ class App extends Component {
 
 
   render() {
-    const { hasRecorded, hasUploaded } = this.state;
+    const { hasUploaded } = this.state;
     return (
       <div className="App">
         <Router>
