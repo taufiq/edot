@@ -12,6 +12,6 @@
   "license": "ISC",
   "dependencies": {
     "crypto-js": "^3.1.9-1",
-    "moment": "^2.24.0"
+    "moment": "^2.29.4"
   }
 }
